@@ -1,3 +1,7 @@
 *CHIP8 Emulator*
 * About:
+This is a CHIP8 emulator. Well... Not yet. I've got lot's of work to do, but the screen, memory, program loader and counter work. The only missing pieces are the CPU and the function to write to the screen.
 * Todo list:
+** CPU implementation
+** Screen writing function
+** Ncurses interface
