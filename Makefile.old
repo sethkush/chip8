@@ -1,0 +1,39 @@
+# Makefile for startsdl.c
+
+# Use the gcc compile program and produce a lot of warning messages about
+# questionable coding practices:
+CC  = gcc -Wall
+
+# Name the binary program that will be created:
+BIN = chip8
+
+# `sdl-config --cflags` gives the following options to the C compiler:
+# -I/usr/include/SDL -D_REENTRANT
+# This says to include the /usr/include/SDL directory, which defines
+# a.o. SDL_Init and holds references to all other SDL functions you use in
+# your program and which can be found in the same directory.
+# -D acts like #define, it sets a variable so as the program will build in the
+# correct way on your system.  It is used by functions in /usr/include.
+CFLAGS=`sdl2-config --cflags` `pkg-config --cflags --libs gtk+-3.0` -std=c99 -ggdb
+
+# Linking with libraries: `sdl-config --libs` gives the following output:
+# -L/usr/lib -Wl,-rpath,/usr/lib -lSDL -lpthread
+# -L looks for libs in a particular directory; -l specifies individual
+# libraries.
+LDFLAGS=`sdl2-config --libs` -L./nfd -L./nfd/include
+
+# "all" is just a name, which points to the objectfiles to be processed.
+# If it is the first target, it is also the default.
+all: $(BIN)
+
+# Particular things to do for each part of the program.  This has only one part,
+# in which we define the object file and to process it with the appropriate
+# options.
+$(BIN): chip8.o
+	$(CC) chip8.o \
+	-o $(BIN) $(LDFLAGS)
+
+# Stuff to clean up when make is called with this argument: remove object files.
+clean:
+	@rm -f *.o
+	@rm $(BIN)

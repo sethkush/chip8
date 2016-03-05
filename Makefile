@@ -1,39 +1,81 @@
-# Makefile for startsdl.c
-
-# Use the gcc compile program and produce a lot of warning messages about
-# questionable coding practices:
-CC  = gcc -Wall
-
-# Name the binary program that will be created:
-BIN = chip8
-
-# `sdl-config --cflags` gives the following options to the C compiler:
-# -I/usr/include/SDL -D_REENTRANT
-# This says to include the /usr/include/SDL directory, which defines
-# a.o. SDL_Init and holds references to all other SDL functions you use in
-# your program and which can be found in the same directory.
-# -D acts like #define, it sets a variable so as the program will build in the
-# correct way on your system.  It is used by functions in /usr/include.
-CFLAGS=`sdl2-config --cflags`
-
-# Linking with libraries: `sdl-config --libs` gives the following output:
-# -L/usr/lib -Wl,-rpath,/usr/lib -lSDL -lpthread
-# -L looks for libs in a particular directory; -l specifies individual
-# libraries.
-LDFLAGS=`sdl2-config --libs`
-
-# "all" is just a name, which points to the objectfiles to be processed.
-# If it is the first target, it is also the default.
-all: $(BIN)
-
-# Particular things to do for each part of the program.  This has only one part,
-# in which we define the object file and to process it with the appropriate
-# options.
-$(BIN): chip8.o
-	$(CC) chip8.o \
-	-o $(BIN) $(LDFLAGS)
-
-# Stuff to clean up when make is called with this argument: remove object files.
-clean:
-	@rm -f *.o
-	@rm $(BIN)
+############################################################################
+# 'A Generic Makefile for Building Multiple main() Targets in $PWD'
+# Author:  Robert A. Nader (2012)
+# Email: naderra at some g
+# Web: xiberix
+############################################################################
+#  The purpose of this makefile is to compile to executable all C source
+#  files in CWD, where each .c file has a main() function, and each object
+#  links with a common LDFLAG.
+#
+#  This makefile should suffice for simple projects that require building
+#  similar executable targets.  For example, if your CWD build requires
+#  exclusively this pattern:
+#
+#  cc -c $(CFLAGS) main_01.c
+#  cc main_01.o $(LDFLAGS) -o main_01
+#
+#  cc -c $(CFLAGS) main_2..c
+#  cc main_02.o $(LDFLAGS) -o main_02
+#
+#  etc, ... a common case when compiling the programs of some chapter,
+#  then you may be interested in using this makefile.
+#
+#  What YOU do:
+#
+#  Set PRG_SUFFIX_FLAG below to either 0 or 1 to enable or disable
+#  the generation of a .exe suffix on executables
+#
+#  Set CFLAGS and LDFLAGS according to your needs.
+#
+#  What this makefile does automagically:
+#
+#  Sets SRC to a list of *.c files in PWD using wildcard.
+#  Sets PRGS BINS and OBJS using pattern substitution.
+#  Compiles each individual .c to .o object file.
+#  Links each individual .o to its corresponding executable.
+#
+###########################################################################
+#
+PRG_SUFFIX_FLAG := 0
+#
+LDFLAGS := `sdl2-config --libs`
+CFLAGS_INC := `sdl2-config --cflags` `pkg-config --cflags --libs gtk+-3.0` -std=c99 -ggdb
+CFLAGS := -g -Wall $(CFLAGS_INC)
+BIN := chip8
+#
+## ==================- NOTHING TO CHANGE BELOW THIS LINE ===================
+##
+SRCS := $(wildcard *.c)
+PRGS := $(patsubst %.c,%,$(SRCS))
+PRG_SUFFIX=.exe
+BINS := $(patsubst %,%$(PRG_SUFFIX),$(PRGS))
+## OBJS are automagically compiled by make.
+#OBJS := $(patsubst %,%.o,$(PRGS))
+##
+all : $(BINS)
+##
+## For clarity sake we make use of:
+#.SECONDEXPANSION:
+#OBJ = $(patsubst %$(PRG_SUFFIX),%.o,$@)
+#ifeq ($(PRG_SUFFIX_FLAG),0)
+#        BIN = $(patsubst %$(PRG_SUFFIX),%,$@)
+#else
+#        BIN = $@
+#endif
+## Compile the executables
+%$(PRG_SUFFIX) : $(OBJS)
+	$(CC) $(SRCS) $(CFLAGS) $(LDFLAGS) -o $(BIN)
+##
+## $(OBJS) should be automagically removed right after linking.
+##
+veryclean:
+#ifeq ($(PRG_SUFFIX_FLAG),0)
+#	$(RM) $(PRGS)
+#else
+#	$(RM) $(BINS)
+#endif
+##
+rebuild: veryclean all
+##
+## eof Generic_Multi_Main_PWD.makefile
