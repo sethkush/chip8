@@ -7,11 +7,28 @@
 #include <sys/stat.h>
 #include <string.h>
 #include <stdlib.h>
+#include "chip8.h"
+#include "cpu.h"
+
+//struct emu_vars {
+//  uint16_t opcode;      // Opcodes are 2 bytes long
+//  uint8_t memory[4096]; // 4K of memory
+//  uint8_t V[16];        // 16 8-bit registers
+//  uint16_t I;           // Index register
+//  uint16_t pc;          // Program counter
+//  uint8_t gfx[64 * 32]; // Array containing screen state
+//  uint8_t delay_timer;  // 60 Hz timer register
+//  uint8_t sound_timer;  // 60 Hz timer that sounds buzzer at 0
+//  uint16_t stack[16];   // 16 level stack for subroutine jump markers
+//  uint16_t sp;          // Stack pointer - which level of the stack is used
+//  uint8_t key[16];      // Keypad state
+//};
 
 // Function prototypes:
 int start_video(SDL_Window**, SDL_Surface**);
-int load_font(uint8_t*);
-int open_program(uint8_t*, SDL_Window*);
+int load_font(struct emu_vars*);
+int open_program(struct emu_vars*, SDL_Window*);
+//int cpu_cycle()
 
 int main(int argc, char* argv[]) {
     
@@ -24,23 +41,17 @@ int main(int argc, char* argv[]) {
     const uint8_t *state = SDL_GetKeyboardState(NULL); // Keyboard state array
 
     // Emulation Variables:
-    uint16_t opcode = 0;  // Opcodes are 2 bytes long
-    uint8_t memory[4096]; // 4K of memory
-    uint8_t V[16];        // 16 8-bit registers
-    uint16_t I = 0;       // Index register
-    uint16_t pc = 0x200;  // Program counter
-    uint8_t gfx[64 * 32]; // Array containing screen state
-    uint8_t delay_timer;  // 60 Hz timer register
-    uint8_t sound_timer;  // 60 Hz timer that sounds buzzer at 0
-    uint16_t stack[16];   // 16 level stack for subroutine jump markers
-    uint16_t sp = 0;      // Stack pointer - which level of the stack is used
-    uint8_t key[16];      // Keypad state
-
+    struct emu_vars hw_state;
+    hw_state.opcode = 0; // Zero the current opcode
+    hw_state.I = 0;      // Zero Index Register
+    hw_state.pc = 0x200;  // Start at 0x200 (512)
+    hw_state.sp = 0;      // Zero stack pointer
+    
     // Call start_video with pointers to the screen and window references:
     if( start_video(&window, &screen) != 0 ) {
 	return 1;
     }
-    if( load_font(memory) != 0 ) {
+    if( load_font(&hw_state) != 0 ) {
 	return 1;
     }
 
@@ -49,14 +60,28 @@ int main(int argc, char* argv[]) {
 
 	// Check for open key:
 	if (state[SDL_SCANCODE_O]) {
-	    printf("O is pressed\n");
-	    while(state[SDL_SCANCODE_O]) {
-		SDL_PumpEvents();
-	    }
-	    if(open_program(memory, window) != 0) {
-		return 1;
-	    }
+	  printf("O is pressed\n");
+	  while(state[SDL_SCANCODE_O]) {
+	    SDL_PumpEvents();
+	  }
+	  if(open_program(&hw_state, window) != 0) {
+	    return 1;
+	  }
+	  run_emu = 1;
+	}
+	// Check for pause key:
+	if (state[SDL_SCANCODE_P]) {
+	  printf("P is pressed\n");
+	  while(state[SDL_SCANCODE_P]) {
+	    SDL_PumpEvents();
+	  }
+	  if(run_emu) {
+	    run_emu = 0;
+	    printf("Paused\n");
+	  } else {
 	    run_emu = 1;
+	    printf("Unpaused\n");
+	  }
 	}
 
 	if(run_emu){
@@ -118,7 +143,7 @@ int start_video(SDL_Window** window, SDL_Surface** screen) {
     return 0;
 }
 
-int load_font(uint8_t* memory) {
+int load_font(struct emu_vars* hw_state) {
     // CHIP8 fontset:
     uint8_t chip8_fontset[80] =
 	{ 
@@ -142,13 +167,13 @@ int load_font(uint8_t* memory) {
 
     // load it into the CHIP8 memory
     for(int i = 0; i < 80; ++i) {
-	memory[i] = chip8_fontset[i];
+	hw_state->memory[i] = chip8_fontset[i];
     }
     
     return 0;
 }
 
-int open_program(uint8_t* memory, SDL_Window* window) {
+int open_program(struct emu_vars* hw_state, SDL_Window* window) {
     nfdchar_t *outPath = NULL;
     nfdresult_t result = NFD_OpenDialog( NULL, NULL, &outPath );
     if ( result == NFD_OKAY ) {
@@ -168,9 +193,9 @@ int open_program(uint8_t* memory, SDL_Window* window) {
 	if (fp) {
 	    fread(buffer, 3000, 1, fp);
 	    fclose(fp);
-	    //for(int i = 0; i < 3000; ++i) {
-	    //memory[i + 512] = buffer[i];
-	    //}
+	    for(int i = 0; i < 3000; ++i) {
+	      hw_state->memory[i + 512] = buffer[i];
+	    }
 	}
 	else {
 	    return 1;
