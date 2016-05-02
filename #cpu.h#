@@ -1,5 +1,0 @@
-#ifndef _cpu_h
-#define _cpu_h
-int cpu_runcycle(struct emu_vars* hw_state);
-
-#endif
