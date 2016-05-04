@@ -10,20 +10,6 @@
 #include "chip8.h"
 #include "cpu.h"
 
-//struct emu_vars {
-//  uint16_t opcode;      // Opcodes are 2 bytes long
-//  uint8_t memory[4096]; // 4K of memory
-//  uint8_t V[16];        // 16 8-bit registers
-//  uint16_t I;           // Index register
-//  uint16_t pc;          // Program counter
-//  uint8_t gfx[64 * 32]; // Array containing screen state
-//  uint8_t delay_timer;  // 60 Hz timer register
-//  uint8_t sound_timer;  // 60 Hz timer that sounds buzzer at 0
-//  uint16_t stack[16];   // 16 level stack for subroutine jump markers
-//  uint16_t sp;          // Stack pointer - which level of the stack is used
-//  uint8_t key[16];      // Keypad state
-//};
-
 // Function prototypes:
 int start_video(SDL_Window**, SDL_Surface**);
 int load_font(struct emu_vars*);
@@ -44,8 +30,8 @@ int main(int argc, char* argv[]) {
     struct emu_vars hw_state;
     hw_state.opcode = 0; // Zero the current opcode
     hw_state.I = 0;      // Zero Index Register
-    hw_state.pc = 0x200;  // Start at 0x200 (512)
-    hw_state.sp = 0;      // Zero stack pointer
+    hw_state.pc = 0x200; // Start at 0x200 (512)
+    hw_state.sp = 0;     // Zero stack pointer
     
     // Call start_video with pointers to the screen and window references:
     if( start_video(&window, &screen) != 0 ) {
@@ -55,6 +41,14 @@ int main(int argc, char* argv[]) {
 	return 1;
     }
 
+    // Clear display, stack, and V registers
+    CLS(&hw_state); // Display
+    for(int i = 0; i < 16; i++) {
+      hw_state.stack[i] = 0; // Stack
+      hw_state.V[i]=0; // V registers
+    }
+    
+    
     // Main loop:
     while( !quit ) {
 
@@ -67,7 +61,7 @@ int main(int argc, char* argv[]) {
 	  if(open_program(&hw_state, window) != 0) {
 	    return 1;
 	  }
-	  run_emu = 1;
+	  run_emu = 0;
 	}
 	// Check for pause key:
 	if (state[SDL_SCANCODE_P]) {
@@ -85,7 +79,8 @@ int main(int argc, char* argv[]) {
 	}
 
 	if(run_emu){
-	    // Do a CPU cycle
+	  //cpu_runcycle(&hw_state);
+	  hw_state.pc++;
 	}
 	
      	// Update the screen:
